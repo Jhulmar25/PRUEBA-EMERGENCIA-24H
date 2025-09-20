@@ -4,11 +4,16 @@
   <meta charset="UTF-8">
   <title>Registro Serenazgo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+
+  <!-- Librería QR optimizada -->
   <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
   <style>
-    body { font-family: Arial; text-align: center; background:#f7f7f7; margin:0; }
+    body { font-family: Arial, sans-serif; text-align: center; background:#f7f7f7; margin:0; }
     h2 { font-size: 22px; margin-top: 20px; }
     button {
       font-size: 26px; font-weight: bold;
@@ -23,8 +28,14 @@
 </head>
 <body>
   <h2>🚨 Registro de Serenos</h2>
+
+  <!-- Botón principal -->
   <button id="btnRegistro" onclick="iniciarEscaneo()">Iniciar Registro</button>
+
+  <!-- Cámara -->
   <div id="qr-reader"></div>
+
+  <!-- Resultado -->
   <div id="resultado"></div>
 
   <script>
@@ -38,28 +49,37 @@
     const db = firebase.firestore();
 
     let html5Qr;
+
+    // 🔹 Iniciar escaneo
     function iniciarEscaneo() {
       document.getElementById("btnRegistro").style.display = "none";
       document.getElementById("qr-reader").style.display = "block";
 
       html5Qr = new Html5Qrcode("qr-reader");
       html5Qr.start(
-        { facingMode: "environment" }, // ✅ cámara trasera
+        { facingMode: "environment" }, // ✅ Forzar cámara trasera
         { fps: 15, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           guardarRegistro(decodedText);
-          html5Qr.stop();
-          document.getElementById("qr-reader").style.display = "none";
-          document.getElementById("btnRegistro").style.display = "block";
+          html5Qr.stop().then(() => {
+            document.getElementById("qr-reader").style.display = "none";
+            document.getElementById("btnRegistro").style.display = "block";
+          });
+        },
+        (errorMsg) => {
+          // Silenciar errores de lectura continua
         }
-      );
+      ).catch(err => {
+        alert("❌ Error al activar la cámara: " + err);
+        console.error(err);
+      });
     }
 
-    // 🔹 Guardar en Firestore
+    // 🔹 Guardar en Firestore organizado por fecha y hora
     function guardarRegistro(decodedText) {
       let datos = decodedText.split(",");
       if (datos.length < 3) {
-        alert("⚠️ QR inválido. Debe tener: dni,nombre,cargo");
+        alert("⚠️ QR inválido. Debe tener formato: dni,nombre,cargo");
         return;
       }
 
@@ -68,8 +88,8 @@
       let cargo = datos[2].trim();
 
       let now = new Date();
-      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-");
-      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");
+      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-"); // dd-mm-yy
+      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");   // hh-mm-ss
 
       db.collection("registros")
         .doc(fecha)              // carpeta por fecha
@@ -82,7 +102,7 @@
         })
         .then(() => {
           document.getElementById("resultado").innerHTML =
-            "✅ " + nombre + " (" + cargo + ") registrado";
+            "✅ " + nombre + " (" + cargo + ") registrado correctamente";
         })
         .catch((err) => {
           console.error(err);
