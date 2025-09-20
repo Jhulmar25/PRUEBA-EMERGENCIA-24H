@@ -12,37 +12,41 @@
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; width: 100%;
-      background: #ffffff; color: #000000;
+      background: #fff; color: #000;
       font-family: Arial, sans-serif;
       display: flex; flex-direction: column;
     }
     h1 {
-      color: #d32f2f; font-size: 24px; margin: 8px 0; text-align: center;
+      color: #d32f2f; font-size: 22px;
+      margin: 8px 0; text-align: center;
     }
     .video-container {
-      flex: 1;
+      flex: 0 0 50%; /* 📏 Solo 50% de la pantalla */
       display: flex; align-items: center; justify-content: center;
-      padding: 5px;
+      background: #000;
     }
     video {
       width: 100%; height: 100%;
-      object-fit: cover; border-radius: 8px;
-      background: #000; display: none;
+      object-fit: cover; border: none; border-radius: 0;
+      display: none;
     }
     .info {
+      flex: 0 0 auto;
       background: #f7f7f7; color: #111;
-      border-radius: 10px; padding: 10px; margin: 5px auto;
-      font-size: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.1);
-      display: none; width: 95%; max-width: 400px; text-align: left;
+      border-radius: 8px; padding: 10px; margin: 8px auto;
+      font-size: 16px; width: 95%; max-width: 400px;
+      display: none; text-align: left;
     }
     .buttons {
-      display: flex; gap: 10px;
-      justify-content: center; padding: 10px;
+      flex: 0 0 auto;
+      display: flex; justify-content: space-around;
+      padding: 10px; gap: 8px;
     }
     .btn {
-      flex: 1; max-width: 180px;
-      padding: 14px; font-size: 16px; font-weight: bold;
-      border: none; border-radius: 8px; cursor: pointer;
+      flex: 1; padding: 14px;
+      font-size: 16px; font-weight: bold;
+      border: none; border-radius: 8px;
+      cursor: pointer;
     }
     .btn-start { background: #d32f2f; color: white; }
     .btn-stop  { background: #555; color: white; display: none; }
@@ -136,9 +140,7 @@
 
         // 🔎 Decodificar
         controls = await reader.decodeFromVideoElement(video, (result) => {
-          if (result) {
-            mostrarDatos(result.getText());
-          }
+          if (result) mostrarDatos(result.getText());
         });
 
       } catch (err) {
