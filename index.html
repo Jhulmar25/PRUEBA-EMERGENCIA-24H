@@ -34,7 +34,8 @@
       max-width: 400px;
       border: 3px solid #d32f2f;
       border-radius: 10px;
-      margin-bottom: 15px;
+      margin: 20px 0;
+      display: none;
     }
     button {
       font-size: 22px;
@@ -46,9 +47,15 @@
       width: 80%;
       max-width: 300px;
     }
+    .btn-start {
+      background: #d32f2f;
+      color: white;
+      font-weight: bold;
+    }
     .btn-stop {
       background: #555;
       color: white;
+      display: none;
     }
     #resultado {
       font-size: 20px;
@@ -59,14 +66,18 @@
   </style>
 </head>
 <body>
-  <h1>🚨 Iniciar Registro</h1>
+  <h1>🚨 Registro de Serenos</h1>
+
+  <!-- Botón iniciar -->
+  <button id="btnIniciar" class="btn-start" onclick="iniciarEscaneo()">Iniciar Registro</button>
 
   <!-- Cámara -->
   <video id="preview"></video>
 
   <!-- Botón detener -->
-  <button class="btn-stop" onclick="detenerEscaneo()">Finalizar</button>
+  <button id="btnFinalizar" class="btn-stop" onclick="detenerEscaneo()">Finalizar</button>
 
+  <!-- Mensaje -->
   <div id="resultado"></div>
 
   <script>
@@ -82,32 +93,45 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // 🔹 Inicializar Instascan
-    let scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
+    let scanner;
+    let camaraActiva;
 
-    scanner.addListener('scan', function (content) {
-      guardarRegistro(content);
-    });
+    // 🔹 Iniciar escaneo
+    function iniciarEscaneo() {
+      document.getElementById("btnIniciar").style.display = "none";
+      document.getElementById("preview").style.display = "block";
+      document.getElementById("btnFinalizar").style.display = "block";
 
-    Instascan.Camera.getCameras().then(function (cameras) {
-      if (cameras.length > 0) {
-        // 📌 En móviles casi siempre la trasera es cameras[1]
-        let cam = cameras.length > 1 ? cameras[1] : cameras[0];
-        scanner.start(cam);
-      } else {
-        alert('No se encontró cámara en este dispositivo.');
-      }
-    }).catch(function (e) {
-      console.error(e);
-    });
+      scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
+
+      scanner.addListener('scan', function (content) {
+        guardarRegistro(content);
+      });
+
+      Instascan.Camera.getCameras().then(function (cameras) {
+        if (cameras.length > 0) {
+          camaraActiva = cameras.length > 1 ? cameras[1] : cameras[0]; // usar trasera si existe
+          scanner.start(camaraActiva);
+        } else {
+          alert('No se encontró cámara en este dispositivo.');
+        }
+      }).catch(function (e) {
+        console.error(e);
+      });
+    }
 
     // 🔹 Detener escaneo
     function detenerEscaneo() {
-      scanner.stop();
-      document.getElementById("resultado").innerHTML = "⛔ Escaneo detenido";
+      if (scanner) {
+        scanner.stop();
+        document.getElementById("preview").style.display = "none";
+        document.getElementById("btnFinalizar").style.display = "none";
+        document.getElementById("btnIniciar").style.display = "block";
+        document.getElementById("resultado").innerHTML = "⛔ Escaneo detenido";
+      }
     }
 
-    // 🔹 Guardar en Firestore por fecha y hora
+    // 🔹 Guardar en Firestore
     function guardarRegistro(decodedText) {
       let datos = decodedText.split(",");
       if (datos.length < 3) {
