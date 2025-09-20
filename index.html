@@ -13,13 +13,14 @@
     body {
       margin: 0; background: #f4f4f4;
       font-family: system-ui, Arial, sans-serif;
-      display: flex; min-height: 100vh; align-items: center; justify-content: center;
+      display: flex; min-height: 100vh;
+      align-items: center; justify-content: center;
     }
     .wrap { width: 100%; max-width: 560px; padding: 20px; text-align: center; }
-    h1 { color: #d32f2f; font-size: 28px; margin-bottom: 10px; }
+    h1 { color: #d32f2f; font-size: 28px; margin-bottom: 20px; }
     video {
-      width: 100%; max-width: 500px; aspect-ratio: 16/9; background: #000;
-      border-radius: 12px; margin: 12px auto; display: none;
+      width: 100%; max-width: 480px; aspect-ratio: 16/9; background: #000;
+      border-radius: 12px; margin: 15px auto; display: none;
     }
     .btn {
       width: 90%; max-width: 320px; margin: 10px auto;
@@ -30,11 +31,11 @@
     .btn-stop  { background: #555; color: white; display: none; }
     .btn-next  { background: #147a22; color: white; display: none; }
     #datos {
-      background: white; border-radius: 10px; padding: 12px; margin-top: 10px;
+      background: white; border-radius: 10px; padding: 15px; margin-top: 10px;
       font-size: 18px; box-shadow: 0 4px 14px rgba(0,0,0,.1);
       display: none; text-align: left;
     }
-    #resultado { font-size: 18px; margin-top: 12px; font-weight: bold; }
+    #resultado { font-size: 18px; margin-top: 15px; font-weight: bold; }
   </style>
 </head>
 <body>
@@ -60,11 +61,15 @@
   <script type="module">
     import { BrowserQRCodeReader, BrowserCodeReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.4/+esm";
 
-    // 🔹 Config Firebase
+    // 🔹 Configuración Firebase
     const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_PROYECTO.firebaseapp.com",
-      projectId: "TU_PROYECTO",
+      apiKey: "AIzaSyCOX79jqHzLhaa_FD9-X-kx3y7IMOjOzv8",
+      authDomain: "transito-dfcf4.firebaseapp.com",
+      projectId: "transito-dfcf4",
+      storageBucket: "transito-dfcf4.firebasestorage.app",
+      messagingSenderId: "359503929507",
+      appId: "1:359503929507:web:a5e241e9f173d217d09f16",
+      measurementId: "G-GDE9BRMZLW"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -126,7 +131,7 @@
     function mostrarDatos(text) {
       const partes = text.split(",");
       if (partes.length < 3) {
-        resultado.textContent = "⚠️ QR inválido. Debe tener formato: dni,nombre,cargo";
+        resultado.textContent = "⚠️ QR inválido. Formato: dni,nombre,cargo";
         return;
       }
       pendingData = {
