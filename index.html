@@ -9,33 +9,67 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
-  <!-- Librería QR optimizada -->
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <!-- Librería QR -->
+  <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
 
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background:#f7f7f7; margin:0; }
-    h2 { font-size: 22px; margin-top: 20px; }
-    button {
-      font-size: 26px; font-weight: bold;
-      padding: 20px; margin-top: 50px;
-      background: red; color: white;
-      border:none; border-radius: 12px; cursor: pointer;
-      width: 85%;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      min-height: 100vh;
     }
-    #qr-reader { width: 100%; max-width: 360px; margin: 20px auto; display:none; }
-    #resultado { font-size: 20px; margin-top: 20px; color: green; font-weight: bold; }
+    h1 {
+      color: #d32f2f;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    #qr-reader {
+      width: 320px;
+      max-width: 100%;
+      margin: 20px auto;
+      display: none;
+    }
+    button {
+      font-size: 22px;
+      padding: 15px 25px;
+      margin: 15px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      width: 80%;
+      max-width: 300px;
+    }
+    .btn-start {
+      background: #d32f2f;
+      color: white;
+      font-weight: bold;
+    }
+    .btn-stop {
+      background: #555;
+      color: white;
+    }
+    #resultado {
+      font-size: 20px;
+      color: green;
+      margin-top: 20px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h2>🚨 Registro de Serenos</h2>
+  <h1>🚨 Iniciar Registro</h1>
 
-  <!-- Botón principal -->
-  <button id="btnRegistro" onclick="iniciarEscaneo()">Iniciar Registro</button>
+  <button id="btnRegistro" class="btn-start" onclick="iniciarEscaneo()">Iniciar Escaneo</button>
 
-  <!-- Cámara -->
   <div id="qr-reader"></div>
 
-  <!-- Resultado -->
+  <button id="btnFinalizar" class="btn-stop" onclick="finalizarEscaneo()" style="display:none;">Finalizar</button>
+
   <div id="resultado"></div>
 
   <script>
@@ -54,28 +88,34 @@
     function iniciarEscaneo() {
       document.getElementById("btnRegistro").style.display = "none";
       document.getElementById("qr-reader").style.display = "block";
+      document.getElementById("btnFinalizar").style.display = "block";
 
       html5Qr = new Html5Qrcode("qr-reader");
       html5Qr.start(
-        { facingMode: "environment" }, // ✅ Forzar cámara trasera
+        { facingMode: "environment" }, // ✅ cámara trasera
         { fps: 15, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           guardarRegistro(decodedText);
-          html5Qr.stop().then(() => {
-            document.getElementById("qr-reader").style.display = "none";
-            document.getElementById("btnRegistro").style.display = "block";
-          });
         },
-        (errorMsg) => {
-          // Silenciar errores de lectura continua
-        }
+        (errorMsg) => {}
       ).catch(err => {
         alert("❌ Error al activar la cámara: " + err);
         console.error(err);
       });
     }
 
-    // 🔹 Guardar en Firestore organizado por fecha y hora
+    // 🔹 Finalizar escaneo
+    function finalizarEscaneo() {
+      if (html5Qr) {
+        html5Qr.stop().then(() => {
+          document.getElementById("qr-reader").style.display = "none";
+          document.getElementById("btnRegistro").style.display = "block";
+          document.getElementById("btnFinalizar").style.display = "none";
+        });
+      }
+    }
+
+    // 🔹 Guardar en Firestore
     function guardarRegistro(decodedText) {
       let datos = decodedText.split(",");
       if (datos.length < 3) {
@@ -88,12 +128,12 @@
       let cargo = datos[2].trim();
 
       let now = new Date();
-      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-"); // dd-mm-yy
-      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");   // hh-mm-ss
+      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-");
+      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");
 
       db.collection("registros")
-        .doc(fecha)              // carpeta por fecha
-        .collection(hora)        // subcarpeta por hora
+        .doc(fecha)
+        .collection(hora)
         .add({
           dni: dni,
           nombre: nombre,
@@ -102,7 +142,7 @@
         })
         .then(() => {
           document.getElementById("resultado").innerHTML =
-            "✅ " + nombre + " (" + cargo + ") registrado correctamente";
+            "✅ " + nombre + " (" + cargo + ") registrado";
         })
         .catch((err) => {
           console.error(err);
