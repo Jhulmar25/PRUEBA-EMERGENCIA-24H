@@ -5,20 +5,18 @@
   <title>Registro Serenazgo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; width: 100%;
-      background: #fff; color: #000;
-      font-family: Arial, sans-serif;
+      background: #f5f5f5; color: #333;
+      font-family: "Segoe UI", Roboto, sans-serif;
       display: flex; flex-direction: column;
     }
     h1 {
-      color: #d32f2f; font-size: 22px;
-      margin: 12px 0; text-align: center;
+      color: #d32f2f; font-size: 24px; margin: 16px 0; text-align: center;
     }
     .screen {
       flex: 1; display: none; flex-direction: column;
@@ -27,47 +25,63 @@
     }
     .screen.active { display: flex; }
 
-    /* Pantalla 1 */
+    /* Pantalla inicio */
     #screen1 button {
       width: 80%; max-width: 280px;
       padding: 16px; font-size: 20px; font-weight: bold;
-      border: none; border-radius: 8px;
+      border: none; border-radius: 10px;
       background: #d32f2f; color: white;
-      cursor: pointer;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      transition: transform 0.1s;
     }
+    #screen1 button:active { transform: scale(0.97); }
 
-    /* Pantalla 2 */
+    /* Pantalla escáner */
     .video-container {
       flex: 0 0 40%; width: 100%;
-      background: #000; border-radius: 8px; margin: 10px 0;
+      background: #000; border-radius: 8px; margin: 8px 0;
       display: flex; justify-content: center; align-items: center;
+      overflow: hidden;
     }
     video {
       width: 100%; height: 100%; object-fit: cover; border-radius: 8px;
     }
     .info {
-      flex: 0 0 auto;
-      background: #f7f7f7; color: #111;
-      border-radius: 8px; padding: 10px; margin: 6px auto;
+      background: #fff; color: #111;
+      border-radius: 10px; padding: 14px; margin: 8px auto;
       font-size: 16px; width: 95%; max-width: 380px;
       display: none; text-align: left;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .buttons {
       flex: 0 0 auto;
-      display: flex; justify-content: space-around;
-      padding: 10px; gap: 8px; width: 100%;
+      display: flex; flex-direction: column;
+      gap: 10px; width: 90%; max-width: 360px;
+      margin-top: auto; margin-bottom: 15px;
     }
     .btn {
-      flex: 1; padding: 14px;
-      font-size: 16px; font-weight: bold;
-      border: none; border-radius: 8px;
-      cursor: pointer;
+      padding: 14px; font-size: 18px; font-weight: bold;
+      border: none; border-radius: 8px; cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      transition: transform 0.1s;
     }
+    .btn:active { transform: scale(0.97); }
     .btn-stop  { background: #555; color: white; }
     .btn-next  { background: #28a745; color: white; display: none; }
-    #resultado {
-      font-size: 15px; margin: 5px; font-weight: bold; text-align: center;
+
+    /* Mensaje flotante (toast) */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      background: #28a745; color: white;
+      padding: 12px 20px; border-radius: 8px;
+      font-weight: bold; font-size: 16px;
+      display: none; z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      animation: fadein 0.3s, fadeout 0.3s 2s;
     }
+    @keyframes fadein { from {opacity:0;} to {opacity:1;} }
+    @keyframes fadeout { from {opacity:1;} to {opacity:0;} }
   </style>
 </head>
 <body>
@@ -77,7 +91,7 @@
     <button id="btnGoScan">Iniciar</button>
   </div>
 
-  <!-- Pantalla 2 (Escáner + Datos + Botones) -->
+  <!-- Pantalla 2 -->
   <div id="screen2" class="screen">
     <h1>🚨 Registro de Serenos</h1>
 
@@ -92,17 +106,19 @@
     </div>
 
     <div class="buttons">
-      <button id="btnNext" class="btn btn-next">✅ Siguiente</button>
+      <button id="btnNext" class="btn btn-next">✅ Guardar / Siguiente</button>
       <button id="btnFinalizar" class="btn btn-stop">Cancelar</button>
     </div>
-
-    <div id="resultado"></div>
   </div>
+
+  <!-- Toast -->
+  <div id="toast">✅ Registro exitoso</div>
 
   <!-- ZXing -->
   <script type="module">
     import { BrowserQRCodeReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.4/+esm";
 
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCOX79jqHzLhaa_FD9-X-kx3y7IMOjOzv8",
       authDomain: "transito-dfcf4.firebaseapp.com",
@@ -115,19 +131,18 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // UI
     const screen1 = document.getElementById("screen1");
     const screen2 = document.getElementById("screen2");
-
     const btnGoScan   = document.getElementById("btnGoScan");
     const btnFinalizar= document.getElementById("btnFinalizar");
     const btnNext     = document.getElementById("btnNext");
-
     const video       = document.getElementById("preview");
     const datosBox    = document.getElementById("datos");
     const dniSpan     = document.getElementById("dni");
     const nombreSpan  = document.getElementById("nombre");
     const cargoSpan   = document.getElementById("cargo");
-    const resultado   = document.getElementById("resultado");
+    const toast       = document.getElementById("toast");
 
     let controls = null;
     let pendingData = null;
@@ -135,30 +150,26 @@
     const reader = new BrowserQRCodeReader();
 
     btnGoScan.onclick = iniciar;
-
     btnFinalizar.onclick = finalizar;
     btnNext.onclick = guardarActual;
 
     async function iniciar() {
-      // Cambiar a pantalla 2
       screen1.classList.remove("active");
       screen2.classList.add("active");
 
       try {
-        // 🚀 Abrir cámara trasera
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { exact: "environment" } }
         });
         video.srcObject = stream;
         await video.play();
 
-        // 🔎 ZXing detecta QR
         controls = await reader.decodeFromVideoElement(video, (result) => {
           if (result) mostrarDatos(result.getText());
         });
 
       } catch (err) {
-        resultado.textContent = "❌ Error cámara: " + err;
+        alert("❌ Error cámara: " + err);
         console.error(err);
         finalizar();
       }
@@ -171,20 +182,15 @@
         stream = null;
       }
       video.srcObject = null;
-      // Regresar a pantalla 1
       screen2.classList.remove("active");
       screen1.classList.add("active");
       datosBox.style.display = "none";
       btnNext.style.display = "none";
-      resultado.textContent = "";
     }
 
     function mostrarDatos(text) {
       const partes = text.split(",");
-      if (partes.length < 3) {
-        resultado.textContent = "⚠️ QR inválido. Formato: dni,nombre,cargo";
-        return;
-      }
+      if (partes.length < 3) return;
       pendingData = {
         dni: partes[0].trim(),
         nombre: partes[1].trim(),
@@ -199,7 +205,6 @@
 
     function guardarActual() {
       if (!pendingData) return;
-
       const now = new Date();
       const fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-");
       const hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");
@@ -207,20 +212,23 @@
       db.collection("registros")
         .doc(fecha)
         .collection(hora)
-        .add({
-          ...pendingData,
-          timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        })
+        .add({ ...pendingData, timestamp: firebase.firestore.FieldValue.serverTimestamp() })
         .then(() => {
-          resultado.textContent = `✅ ${pendingData.nombre} (${pendingData.cargo}) registrado`;
+          showToast("✅ Registro exitoso");
           pendingData = null;
           datosBox.style.display = "none";
           btnNext.style.display = "none";
         })
         .catch(err => {
-          resultado.textContent = "❌ Error al guardar en Firebase";
+          showToast("❌ Error al guardar");
           console.error(err);
         });
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.style.display = "block";
+      setTimeout(() => { toast.style.display = "none"; }, 2500);
     }
   </script>
 </body>
