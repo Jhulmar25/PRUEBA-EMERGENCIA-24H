@@ -9,8 +9,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
-  <!-- Librería QR -->
-  <script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+  <!-- Instascan.js -->
+  <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
 
   <style>
     body {
@@ -22,33 +22,29 @@
       align-items: center;
       flex-direction: column;
       min-height: 100vh;
+      text-align: center;
     }
     h1 {
       color: #d32f2f;
       font-size: 28px;
-      margin-bottom: 10px;
-      text-align: center;
+      margin-bottom: 15px;
     }
-    #qr-reader {
+    video {
       width: 100%;
-      max-width: 500px;  /* 📌 escaneo más grande */
-      margin: 10px auto;
-      display: none;
+      max-width: 400px;
+      border: 3px solid #d32f2f;
+      border-radius: 10px;
+      margin-bottom: 15px;
     }
     button {
       font-size: 22px;
       padding: 15px 25px;
-      margin: 15px;
+      margin: 10px;
       border: none;
       border-radius: 10px;
       cursor: pointer;
       width: 80%;
       max-width: 300px;
-    }
-    .btn-start {
-      background: #d32f2f;
-      color: white;
-      font-weight: bold;
     }
     .btn-stop {
       background: #555;
@@ -57,20 +53,19 @@
     #resultado {
       font-size: 20px;
       color: green;
-      margin-top: 15px;
+      margin-top: 10px;
       font-weight: bold;
-      text-align: center;
     }
   </style>
 </head>
 <body>
   <h1>🚨 Iniciar Registro</h1>
 
-  <button id="btnRegistro" class="btn-start" onclick="iniciarEscaneo()">Iniciar Escaneo</button>
+  <!-- Cámara -->
+  <video id="preview"></video>
 
-  <div id="qr-reader"></div>
-
-  <button id="btnFinalizar" class="btn-stop" onclick="finalizarEscaneo()" style="display:none;">Finalizar</button>
+  <!-- Botón detener -->
+  <button class="btn-stop" onclick="detenerEscaneo()">Finalizar</button>
 
   <div id="resultado"></div>
 
@@ -80,51 +75,39 @@
       apiKey: "TU_API_KEY",
       authDomain: "TU_PROYECTO.firebaseapp.com",
       projectId: "TU_PROYECTO",
+      storageBucket: "TU_PROYECTO.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef123456"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let html5Qr;
+    // 🔹 Inicializar Instascan
+    let scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
 
-    // 🔹 Iniciar escaneo
-    function iniciarEscaneo() {
-      document.getElementById("btnRegistro").style.display = "none";
-      document.getElementById("qr-reader").style.display = "block";
-      document.getElementById("btnFinalizar").style.display = "block";
+    scanner.addListener('scan', function (content) {
+      guardarRegistro(content);
+    });
 
-      html5Qr = new Html5Qrcode("qr-reader");
-      html5Qr.start(
-        { facingMode: "environment" }, // ✅ cámara trasera
-        {
-          fps: 15,
-          qrbox: function(viewfinderWidth, viewfinderHeight) {
-            // 📌 Caja más grande (80% de la pantalla)
-            let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            return { width: minEdge * 0.8, height: minEdge * 0.8 };
-          }
-        },
-        (decodedText) => {
-          guardarRegistro(decodedText);
-        },
-        (errorMsg) => {}
-      ).catch(err => {
-        alert("❌ Error al activar la cámara: " + err);
-        console.error(err);
-      });
-    }
-
-    // 🔹 Finalizar escaneo
-    function finalizarEscaneo() {
-      if (html5Qr) {
-        html5Qr.stop().then(() => {
-          document.getElementById("qr-reader").style.display = "none";
-          document.getElementById("btnRegistro").style.display = "block";
-          document.getElementById("btnFinalizar").style.display = "none";
-        });
+    Instascan.Camera.getCameras().then(function (cameras) {
+      if (cameras.length > 0) {
+        // 📌 En móviles casi siempre la trasera es cameras[1]
+        let cam = cameras.length > 1 ? cameras[1] : cameras[0];
+        scanner.start(cam);
+      } else {
+        alert('No se encontró cámara en este dispositivo.');
       }
+    }).catch(function (e) {
+      console.error(e);
+    });
+
+    // 🔹 Detener escaneo
+    function detenerEscaneo() {
+      scanner.stop();
+      document.getElementById("resultado").innerHTML = "⛔ Escaneo detenido";
     }
 
-    // 🔹 Guardar en Firestore
+    // 🔹 Guardar en Firestore por fecha y hora
     function guardarRegistro(decodedText) {
       let datos = decodedText.split(",");
       if (datos.length < 3) {
