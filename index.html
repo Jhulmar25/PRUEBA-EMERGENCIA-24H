@@ -18,7 +18,7 @@
     }
     h1 {
       color: #d32f2f; font-size: 22px;
-      margin: 8px 0; text-align: center;
+      margin: 12px 0; text-align: center;
     }
     .screen {
       flex: 1; display: none; flex-direction: column;
@@ -26,6 +26,7 @@
       padding: 10px;
     }
     .screen.active { display: flex; }
+
     /* Pantalla 1 */
     #screen1 button {
       width: 80%; max-width: 280px;
@@ -34,6 +35,7 @@
       background: #d32f2f; color: white;
       cursor: pointer;
     }
+
     /* Pantalla 2 */
     .video-container {
       flex: 0 0 40%; width: 100%;
@@ -61,8 +63,7 @@
       border: none; border-radius: 8px;
       cursor: pointer;
     }
-    .btn-start { background: #d32f2f; color: white; }
-    .btn-stop  { background: #555; color: white; display: none; }
+    .btn-stop  { background: #555; color: white; }
     .btn-next  { background: #28a745; color: white; display: none; }
     #resultado {
       font-size: 15px; margin: 5px; font-weight: bold; text-align: center;
@@ -76,7 +77,7 @@
     <button id="btnGoScan">Iniciar</button>
   </div>
 
-  <!-- Pantalla 2 -->
+  <!-- Pantalla 2 (Escáner + Datos + Botones) -->
   <div id="screen2" class="screen">
     <h1>🚨 Registro de Serenos</h1>
 
@@ -91,7 +92,6 @@
     </div>
 
     <div class="buttons">
-      <button id="btnIniciar" class="btn btn-start">Iniciar</button>
       <button id="btnNext" class="btn btn-next">✅ Siguiente</button>
       <button id="btnFinalizar" class="btn btn-stop">Cancelar</button>
     </div>
@@ -115,17 +115,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Pantallas
     const screen1 = document.getElementById("screen1");
     const screen2 = document.getElementById("screen2");
 
-    // Botones
     const btnGoScan   = document.getElementById("btnGoScan");
-    const btnIniciar  = document.getElementById("btnIniciar");
     const btnFinalizar= document.getElementById("btnFinalizar");
     const btnNext     = document.getElementById("btnNext");
 
-    // Otros elementos
     const video       = document.getElementById("preview");
     const datosBox    = document.getElementById("datos");
     const dniSpan     = document.getElementById("dni");
@@ -138,28 +134,25 @@
     let stream = null;
     const reader = new BrowserQRCodeReader();
 
-    btnGoScan.onclick = () => {
-      screen1.classList.remove("active");
-      screen2.classList.add("active");
-    };
+    btnGoScan.onclick = iniciar;
 
-    btnIniciar.onclick = iniciar;
     btnFinalizar.onclick = finalizar;
     btnNext.onclick = guardarActual;
 
     async function iniciar() {
-      btnIniciar.style.display = "none";
-      btnFinalizar.style.display = "block";
-      resultado.textContent = "";
+      // Cambiar a pantalla 2
+      screen1.classList.remove("active");
+      screen2.classList.add("active");
 
       try {
-        // 🚀 Abrir cámara rápido
+        // 🚀 Abrir cámara trasera
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { exact: "environment" } }
         });
         video.srcObject = stream;
         await video.play();
 
+        // 🔎 ZXing detecta QR
         controls = await reader.decodeFromVideoElement(video, (result) => {
           if (result) mostrarDatos(result.getText());
         });
@@ -178,11 +171,12 @@
         stream = null;
       }
       video.srcObject = null;
-      btnFinalizar.style.display = "none";
-      btnIniciar.style.display = "block";
-      btnNext.style.display = "none";
+      // Regresar a pantalla 1
+      screen2.classList.remove("active");
+      screen1.classList.add("active");
       datosBox.style.display = "none";
-      resultado.textContent = "⛔ Escaneo detenido";
+      btnNext.style.display = "none";
+      resultado.textContent = "";
     }
 
     function mostrarDatos(text) {
