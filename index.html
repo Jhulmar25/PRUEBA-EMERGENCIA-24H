@@ -5,6 +5,7 @@
   <title>Registro Serenazgo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
@@ -19,15 +20,28 @@
       color: #d32f2f; font-size: 22px;
       margin: 8px 0; text-align: center;
     }
+    .screen {
+      flex: 1; display: none; flex-direction: column;
+      justify-content: center; align-items: center;
+      padding: 10px;
+    }
+    .screen.active { display: flex; }
+    /* Pantalla 1 */
+    #screen1 button {
+      width: 80%; max-width: 280px;
+      padding: 16px; font-size: 20px; font-weight: bold;
+      border: none; border-radius: 8px;
+      background: #d32f2f; color: white;
+      cursor: pointer;
+    }
+    /* Pantalla 2 */
     .video-container {
-      flex: 0 0 40%; /* 📏 Video ocupa siempre 40% */
-      background: #000;
+      flex: 0 0 40%; width: 100%;
+      background: #000; border-radius: 8px; margin: 10px 0;
       display: flex; justify-content: center; align-items: center;
     }
     video {
-      width: 100%; height: 100%;
-      object-fit: cover;
-      display: block;
+      width: 100%; height: 100%; object-fit: cover; border-radius: 8px;
     }
     .info {
       flex: 0 0 auto;
@@ -39,7 +53,7 @@
     .buttons {
       flex: 0 0 auto;
       display: flex; justify-content: space-around;
-      padding: 10px; gap: 8px;
+      padding: 10px; gap: 8px; width: 100%;
     }
     .btn {
       flex: 1; padding: 14px;
@@ -56,26 +70,36 @@
   </style>
 </head>
 <body>
-  <h1>🚨 Registro de Serenos</h1>
-
-  <div class="video-container">
-    <video id="preview" playsinline></video>
+  <!-- Pantalla 1 -->
+  <div id="screen1" class="screen active">
+    <h1>🚨 Registro de Serenos</h1>
+    <button id="btnGoScan">Iniciar</button>
   </div>
 
-  <div id="datos" class="info">
-    <p><b>DNI:</b> <span id="dni"></span></p>
-    <p><b>Nombre:</b> <span id="nombre"></span></p>
-    <p><b>Cargo:</b> <span id="cargo"></span></p>
+  <!-- Pantalla 2 -->
+  <div id="screen2" class="screen">
+    <h1>🚨 Registro de Serenos</h1>
+
+    <div class="video-container">
+      <video id="preview" playsinline></video>
+    </div>
+
+    <div id="datos" class="info">
+      <p><b>DNI:</b> <span id="dni"></span></p>
+      <p><b>Nombre:</b> <span id="nombre"></span></p>
+      <p><b>Cargo:</b> <span id="cargo"></span></p>
+    </div>
+
+    <div class="buttons">
+      <button id="btnIniciar" class="btn btn-start">Iniciar</button>
+      <button id="btnNext" class="btn btn-next">✅ Siguiente</button>
+      <button id="btnFinalizar" class="btn btn-stop">Cancelar</button>
+    </div>
+
+    <div id="resultado"></div>
   </div>
 
-  <div class="buttons">
-    <button id="btnIniciar" class="btn btn-start">Iniciar</button>
-    <button id="btnNext" class="btn btn-next">✅ Siguiente</button>
-    <button id="btnFinalizar" class="btn btn-stop">Cancelar</button>
-  </div>
-
-  <div id="resultado"></div>
-
+  <!-- ZXing -->
   <script type="module">
     import { BrowserQRCodeReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.4/+esm";
 
@@ -91,21 +115,33 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const btnIniciar   = document.getElementById("btnIniciar");
-    const btnFinalizar = document.getElementById("btnFinalizar");
-    const btnNext      = document.getElementById("btnNext");
-    const video        = document.getElementById("preview");
-    const datosBox     = document.getElementById("datos");
-    const dniSpan      = document.getElementById("dni");
-    const nombreSpan   = document.getElementById("nombre");
-    const cargoSpan    = document.getElementById("cargo");
-    const resultado    = document.getElementById("resultado");
+    // Pantallas
+    const screen1 = document.getElementById("screen1");
+    const screen2 = document.getElementById("screen2");
+
+    // Botones
+    const btnGoScan   = document.getElementById("btnGoScan");
+    const btnIniciar  = document.getElementById("btnIniciar");
+    const btnFinalizar= document.getElementById("btnFinalizar");
+    const btnNext     = document.getElementById("btnNext");
+
+    // Otros elementos
+    const video       = document.getElementById("preview");
+    const datosBox    = document.getElementById("datos");
+    const dniSpan     = document.getElementById("dni");
+    const nombreSpan  = document.getElementById("nombre");
+    const cargoSpan   = document.getElementById("cargo");
+    const resultado   = document.getElementById("resultado");
 
     let controls = null;
     let pendingData = null;
     let stream = null;
-
     const reader = new BrowserQRCodeReader();
+
+    btnGoScan.onclick = () => {
+      screen1.classList.remove("active");
+      screen2.classList.add("active");
+    };
 
     btnIniciar.onclick = iniciar;
     btnFinalizar.onclick = finalizar;
@@ -124,7 +160,6 @@
         video.srcObject = stream;
         await video.play();
 
-        // 🔎 Pasar el video a ZXing
         controls = await reader.decodeFromVideoElement(video, (result) => {
           if (result) mostrarDatos(result.getText());
         });
