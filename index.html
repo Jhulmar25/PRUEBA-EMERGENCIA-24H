@@ -2,33 +2,25 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Registro de Incidente</title>
+  <title>Registro Serenazgo</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; background:#f7f7f7; }
     h2 { font-size: 28px; }
-    input { font-size: 22px; padding: 10px; width: 80%; margin: 10px; }
-    button { font-size: 22px; padding: 15px; margin: 10px; border:none; border-radius: 8px; cursor: pointer; }
-    .verde { background: green; color: white; }
-    .azul { background: blue; color: white; }
-    #lista { margin-top: 20px; font-size: 20px; }
+    button { font-size: 28px; padding: 20px 40px; margin-top: 50px;
+             background: red; color: white; border:none; border-radius: 12px; cursor: pointer; }
+    #qr-reader { width: 320px; margin: 20px auto; display:none; }
   </style>
 </head>
 <body>
-  <h2>🚨 Registrar Incidente</h2>
+  <h2>🚨 Registro de Serenos</h2>
 
-  <label>Tipo de accidente:</label><br>
-  <input type="text" id="tipo" placeholder="Ej: Robo, Accidente..."><br>
+  <button id="btnRegistro" onclick="iniciarEscaneo()">Iniciar Registro</button>
 
-  <button class="verde" onclick="scanUnidad()">🚓 Escanear Vehículo</button><br>
-  <button class="verde" onclick="scanAgente()">👮 Escanear Agente</button><br>
-
-  <div id="qr-reader" style="width:300px; margin:auto;"></div>
-  <div id="lista"></div><br>
-
-  <button class="azul" onclick="guardar()">💾 Guardar Incidente</button>
+  <div id="qr-reader"></div>
+  <div id="resultado" style="font-size:20px; margin-top:20px;"></div>
 
   <script>
     // 🔹 Configuración Firebase
@@ -40,84 +32,56 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let personal = [];
-    let unidad = null;
-    let currentScanType = null; // "unidad" o "agente"
-
-    // 🔹 Inicializar escáner
-    let scanner = new Html5Qrcode("qr-reader");
-
-    function startScanner(callback) {
+    // 🔹 Inicializar QR
+    let scanner;
+    function iniciarEscaneo() {
+      document.getElementById("qr-reader").style.display = "block";
+      scanner = new Html5Qrcode("qr-reader");
       scanner.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         (decodedText) => {
-          callback(decodedText);
+          guardarRegistro(decodedText);
           scanner.stop();
+          document.getElementById("qr-reader").style.display = "none";
         }
       );
     }
 
-    function scanUnidad() {
-      currentScanType = "unidad";
-      startScanner(onScanSuccess);
-    }
-
-    function scanAgente() {
-      currentScanType = "agente";
-      startScanner(onScanSuccess);
-    }
-
-    function onScanSuccess(decodedText) {
+    // 🔹 Guardar en Firestore por fecha y hora
+    function guardarRegistro(decodedText) {
       let datos = decodedText.split("|");
-      if (currentScanType === "unidad" && datos[0].startsWith("U")) {
-        unidad = { id: datos[0], tipo: datos[1], placa: datos[2] };
-      }
-      if (currentScanType === "agente" && datos[0].startsWith("P")) {
-        personal.push({
-          id: datos[0],
-          nombre: datos[1],
-          dni: datos[2],
-          cargo: datos[3]
-        });
-      }
-      mostrarLista();
-    }
-
-    function mostrarLista() {
-      let html = "";
-      if (unidad) {
-        html += "<b>Unidad:</b> " + unidad.tipo + " " + unidad.placa + "<br>";
-      }
-      if (personal.length > 0) {
-        html += "<b>Personal:</b><br>";
-        personal.forEach(p => {
-          html += "- " + p.nombre + " (" + p.cargo + ")<br>";
-        });
-      }
-      document.getElementById("lista").innerHTML = html;
-    }
-
-    function guardar() {
-      let tipo = document.getElementById("tipo").value;
-      if (!tipo || !unidad || personal.length === 0) {
-        alert("⚠️ Debes ingresar tipo, unidad y al menos un agente");
+      if (datos.length < 3) {
+        alert("⚠️ QR inválido");
         return;
       }
 
-      db.collection("incidentes").add({
-        tipo: tipo,
-        fecha: new Date().toISOString(),
-        unidad: unidad,
-        personal: personal
-      }).then(() => {
-        alert("✅ Incidente registrado con éxito");
-        // limpiar
-        personal = [];
-        unidad = null;
-        document.getElementById("tipo").value = "";
-        mostrarLista();
-      });
+      let dni = datos[0];
+      let nombre = datos[1];
+      let cargo = datos[2];
+
+      // Obtener fecha y hora
+      let now = new Date();
+      let fecha = now.toLocaleDateString("es-PE"); // dd/mm/aa
+      let hora = now.toLocaleTimeString("es-PE"); // hh:mm:ss
+
+      db.collection("registros")
+        .doc(fecha)            // carpeta por fecha
+        .collection(hora)      // subcarpeta por hora
+        .add({
+          dni: dni,
+          nombre: nombre,
+          cargo: cargo,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+          document.getElementById("resultado").innerHTML =
+            "✅ Registro guardado:<br>" + nombre + " (" + cargo + ")";
+        })
+        .catch((err) => {
+          console.error(err);
+          alert("❌ Error al guardar en Firebase");
+        });
     }
   </script>
 </body>
