@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Registro Serenazgo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- ✅ Adaptado a móvil -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background:#f7f7f7; margin:0; }
+    body { font-family: Arial; text-align: center; background:#f7f7f7; margin:0; }
     h2 { font-size: 22px; margin-top: 20px; }
     button {
-      font-size: 24px; font-weight: bold;
-      padding: 20px; margin-top: 40px;
+      font-size: 26px; font-weight: bold;
+      padding: 20px; margin-top: 50px;
       background: red; color: white;
       border:none; border-radius: 12px; cursor: pointer;
-      width: 80%;
+      width: 85%;
     }
     #qr-reader { width: 100%; max-width: 360px; margin: 20px auto; display:none; }
     #resultado { font-size: 20px; margin-top: 20px; color: green; font-weight: bold; }
@@ -23,14 +23,8 @@
 </head>
 <body>
   <h2>🚨 Registro de Serenos</h2>
-
-  <!-- Botón de inicio -->
   <button id="btnRegistro" onclick="iniciarEscaneo()">Iniciar Registro</button>
-
-  <!-- Cámara -->
   <div id="qr-reader"></div>
-
-  <!-- Resultado -->
   <div id="resultado"></div>
 
   <script>
@@ -43,42 +37,39 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let scanner;
-
-    // 🔹 Inicia escaneo
+    let html5Qr;
     function iniciarEscaneo() {
-      document.getElementById("btnRegistro").style.display = "none"; // ocultar botón
-      document.getElementById("qr-reader").style.display = "block";  // mostrar cámara
+      document.getElementById("btnRegistro").style.display = "none";
+      document.getElementById("qr-reader").style.display = "block";
 
-      scanner = new Html5Qrcode("qr-reader");
-      scanner.start(
-        { facingMode: "environment" }, // ✅ cámara trasera por defecto
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+      html5Qr = new Html5Qrcode("qr-reader");
+      html5Qr.start(
+        { facingMode: "environment" }, // ✅ cámara trasera
+        { fps: 15, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
           guardarRegistro(decodedText);
-          scanner.stop();
+          html5Qr.stop();
           document.getElementById("qr-reader").style.display = "none";
-          document.getElementById("btnRegistro").style.display = "block"; // volver a mostrar botón
+          document.getElementById("btnRegistro").style.display = "block";
         }
       );
     }
 
-    // 🔹 Guardar en Firestore por fecha/hora
+    // 🔹 Guardar en Firestore
     function guardarRegistro(decodedText) {
-      let datos = decodedText.split("|");
+      let datos = decodedText.split(",");
       if (datos.length < 3) {
-        alert("⚠️ QR inválido");
+        alert("⚠️ QR inválido. Debe tener: dni,nombre,cargo");
         return;
       }
 
-      let dni = datos[0];
-      let nombre = datos[1];
-      let cargo = datos[2];
+      let dni = datos[0].trim();
+      let nombre = datos[1].trim();
+      let cargo = datos[2].trim();
 
-      // Fecha y hora local
       let now = new Date();
-      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-"); // dd-mm-yy
-      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");   // hh-mm-ss
+      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-");
+      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");
 
       db.collection("registros")
         .doc(fecha)              // carpeta por fecha
