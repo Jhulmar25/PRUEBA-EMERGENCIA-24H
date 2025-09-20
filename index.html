@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro de Incidente</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background:#f7f7f7; }
+    h2 { font-size: 28px; }
+    input { font-size: 22px; padding: 10px; width: 80%; margin: 10px; }
+    button { font-size: 22px; padding: 15px; margin: 10px; border:none; border-radius: 8px; cursor: pointer; }
+    .verde { background: green; color: white; }
+    .azul { background: blue; color: white; }
+    #lista { margin-top: 20px; font-size: 20px; }
+  </style>
+</head>
+<body>
+  <h2>🚨 Registrar Incidente</h2>
+
+  <label>Tipo de accidente:</label><br>
+  <input type="text" id="tipo" placeholder="Ej: Robo, Accidente..."><br>
+
+  <button class="verde" onclick="scanUnidad()">🚓 Escanear Vehículo</button><br>
+  <button class="verde" onclick="scanAgente()">👮 Escanear Agente</button><br>
+
+  <div id="qr-reader" style="width:300px; margin:auto;"></div>
+  <div id="lista"></div><br>
+
+  <button class="azul" onclick="guardar()">💾 Guardar Incidente</button>
+
+  <script>
+    // 🔹 Configuración Firebase
+    const firebaseConfig = {
+      apiKey: "TU_API_KEY",
+      authDomain: "TU_PROYECTO.firebaseapp.com",
+      projectId: "TU_PROYECTO",
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let personal = [];
+    let unidad = null;
+    let currentScanType = null; // "unidad" o "agente"
+
+    // 🔹 Inicializar escáner
+    let scanner = new Html5Qrcode("qr-reader");
+
+    function startScanner(callback) {
+      scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        (decodedText) => {
+          callback(decodedText);
+          scanner.stop();
+        }
+      );
+    }
+
+    function scanUnidad() {
+      currentScanType = "unidad";
+      startScanner(onScanSuccess);
+    }
+
+    function scanAgente() {
+      currentScanType = "agente";
+      startScanner(onScanSuccess);
+    }
+
+    function onScanSuccess(decodedText) {
+      let datos = decodedText.split("|");
+      if (currentScanType === "unidad" && datos[0].startsWith("U")) {
+        unidad = { id: datos[0], tipo: datos[1], placa: datos[2] };
+      }
+      if (currentScanType === "agente" && datos[0].startsWith("P")) {
+        personal.push({
+          id: datos[0],
+          nombre: datos[1],
+          dni: datos[2],
+          cargo: datos[3]
+        });
+      }
+      mostrarLista();
+    }
+
+    function mostrarLista() {
+      let html = "";
+      if (unidad) {
+        html += "<b>Unidad:</b> " + unidad.tipo + " " + unidad.placa + "<br>";
+      }
+      if (personal.length > 0) {
+        html += "<b>Personal:</b><br>";
+        personal.forEach(p => {
+          html += "- " + p.nombre + " (" + p.cargo + ")<br>";
+        });
+      }
+      document.getElementById("lista").innerHTML = html;
+    }
+
+    function guardar() {
+      let tipo = document.getElementById("tipo").value;
+      if (!tipo || !unidad || personal.length === 0) {
+        alert("⚠️ Debes ingresar tipo, unidad y al menos un agente");
+        return;
+      }
+
+      db.collection("incidentes").add({
+        tipo: tipo,
+        fecha: new Date().toISOString(),
+        unidad: unidad,
+        personal: personal
+      }).then(() => {
+        alert("✅ Incidente registrado con éxito");
+        // limpiar
+        personal = [];
+        unidad = null;
+        document.getElementById("tipo").value = "";
+        mostrarLista();
+      });
+    }
+  </script>
+</body>
+</html>
