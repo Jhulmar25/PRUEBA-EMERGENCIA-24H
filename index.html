@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>Registro Serenazgo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
@@ -26,12 +26,13 @@
     h1 {
       color: #d32f2f;
       font-size: 28px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
+      text-align: center;
     }
     #qr-reader {
-      width: 320px;
-      max-width: 100%;
-      margin: 20px auto;
+      width: 100%;
+      max-width: 500px;  /* 📌 escaneo más grande */
+      margin: 10px auto;
       display: none;
     }
     button {
@@ -56,8 +57,9 @@
     #resultado {
       font-size: 20px;
       color: green;
-      margin-top: 20px;
+      margin-top: 15px;
       font-weight: bold;
+      text-align: center;
     }
   </style>
 </head>
@@ -93,7 +95,14 @@
       html5Qr = new Html5Qrcode("qr-reader");
       html5Qr.start(
         { facingMode: "environment" }, // ✅ cámara trasera
-        { fps: 15, qrbox: { width: 250, height: 250 } },
+        {
+          fps: 15,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            // 📌 Caja más grande (80% de la pantalla)
+            let minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            return { width: minEdge * 0.8, height: minEdge * 0.8 };
+          }
+        },
         (decodedText) => {
           guardarRegistro(decodedText);
         },
