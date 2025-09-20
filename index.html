@@ -1,87 +1,96 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Registro Serenazgo</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Firebase -->
+  <!-- Firebase (compat) -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
-  <!-- Instascan.js -->
-  <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
-
   <style>
+    :root {
+      --rojo: #d32f2f;
+      --gris: #555;
+      --bg: #f4f4f4;
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      min-height: 100vh;
-      text-align: center;
+      margin: 0; background: var(--bg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      display: flex; min-height: 100vh; align-items: center; justify-content: center;
+    }
+    .wrap {
+      width: 100%; max-width: 560px; padding: 24px; text-align: center;
     }
     h1 {
-      color: #d32f2f;
-      font-size: 28px;
-      margin-bottom: 15px;
+      margin: 0 0 12px; font-size: 28px; color: var(--rojo);
+    }
+    p.subtitle { margin: 0 0 18px; color: #333; }
+    .card {
+      background: #fff; border-radius: 16px; padding: 18px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.08);
+    }
+    .btn {
+      width: 100%; max-width: 320px; margin: 10px auto; display: inline-block;
+      padding: 16px 18px; font-size: 18px; font-weight: 700; letter-spacing:.2px;
+      border: 0; border-radius: 12px; cursor: pointer;
+      transition: transform .04s ease, opacity .2s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-start { background: var(--rojo); color: #fff; }
+    .btn-stop  { background: var(--gris); color: #fff; display: none; }
+    .controls { display: none; gap: 10px; justify-content: center; align-items: center; margin: 10px 0 0; }
+    .controls .btn-small {
+      padding: 10px 14px; font-size: 14px; border-radius: 10px; border: 0; cursor: pointer;
+      background: #222; color: #fff;
+    }
+    .controls .slider {
+      -webkit-appearance: none; appearance: none; width: 180px; height: 8px; border-radius: 8px;
+      background: #e5e5e5; outline: none;
     }
     video {
-      width: 100%;
-      max-width: 400px;
-      border: 3px solid #d32f2f;
-      border-radius: 10px;
-      margin: 20px 0;
-      display: none;
-    }
-    button {
-      font-size: 22px;
-      padding: 15px 25px;
-      margin: 10px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      width: 80%;
-      max-width: 300px;
-    }
-    .btn-start {
-      background: #d32f2f;
-      color: white;
-      font-weight: bold;
-    }
-    .btn-stop {
-      background: #555;
-      color: white;
-      display: none;
+      width: 100%; max-width: 520px; aspect-ratio: 16/9; background: #000;
+      border-radius: 14px; margin: 12px auto; display: none;
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
     }
     #resultado {
-      font-size: 20px;
-      color: green;
-      margin-top: 10px;
-      font-weight: bold;
+      margin-top: 8px; font-weight: 700; color: #147a22; min-height: 24px;
     }
+    .hint { color:#666; font-size: 13px; margin-top: 6px; }
   </style>
 </head>
 <body>
-  <h1>🚨 Registro de Serenos</h1>
+  <div class="wrap">
+    <h1>🚨 Iniciar Registro</h1>
+    <p class="subtitle">Apunta el código (formato: <b>dni,nombre,cargo</b>)</p>
 
-  <!-- Botón iniciar -->
-  <button id="btnIniciar" class="btn-start" onclick="iniciarEscaneo()">Iniciar Registro</button>
+    <div class="card">
+      <button id="btnIniciar" class="btn btn-start">Iniciar Registro</button>
 
-  <!-- Cámara -->
-  <video id="preview"></video>
+      <video id="preview" playsinline></video>
 
-  <!-- Botón detener -->
-  <button id="btnFinalizar" class="btn-stop" onclick="detenerEscaneo()">Finalizar</button>
+      <div class="controls" id="extraControls">
+        <button id="btnTorch" class="btn-small" style="display:none;">🔦 Linterna</button>
+        <input id="zoomSlider" class="slider" type="range" min="1" max="1" step="0.1" value="1" style="display:none;" />
+      </div>
 
-  <!-- Mensaje -->
-  <div id="resultado"></div>
+      <button id="btnFinalizar" class="btn btn-stop">Finalizar</button>
 
-  <script>
-    // 🔹 Configuración Firebase
+      <div id="resultado"></div>
+      <div class="hint">Si no abre la cámara, abre el enlace con <b>HTTPS</b> (o localhost) y otorga permisos.</div>
+    </div>
+  </div>
+
+  <!-- ZXing: import ESM desde CDN -->
+  <script type="module">
+    import {
+      BrowserQRCodeReader,
+      BrowserCodeReader
+    } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.4/+esm";
+
+    // ⚙️ Firebase config (pon los valores reales de tu proyecto)
     const firebaseConfig = {
       apiKey: "TU_API_KEY",
       authDomain: "TU_PROYECTO.firebaseapp.com",
@@ -93,76 +102,177 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    let scanner;
-    let camaraActiva;
+    // UI refs
+    const btnIniciar   = document.getElementById('btnIniciar');
+    const btnFinalizar = document.getElementById('btnFinalizar');
+    const video        = document.getElementById('preview');
+    const resultado    = document.getElementById('resultado');
+    const btnTorch     = document.getElementById('btnTorch');
+    const zoomSlider   = document.getElementById('zoomSlider');
+    const extraControls= document.getElementById('extraControls');
 
-    // 🔹 Iniciar escaneo
-    function iniciarEscaneo() {
-      document.getElementById("btnIniciar").style.display = "none";
-      document.getElementById("preview").style.display = "block";
-      document.getElementById("btnFinalizar").style.display = "block";
+    // ZXing
+    const reader = new BrowserQRCodeReader();
+    let controls = null;
+    let currentTrack = null;
+    let torchOn = false;
 
-      scanner = new Instascan.Scanner({ video: document.getElementById('preview'), mirror: false });
+    // Evita duplicados por lecturas seguidas
+    let lastText = "";
+    let lastTime = 0;
 
-      scanner.addListener('scan', function (content) {
-        guardarRegistro(content);
-      });
+    btnIniciar.addEventListener('click', iniciar);
+    btnFinalizar.addEventListener('click', finalizar);
+    btnTorch.addEventListener('click', toggleTorch);
+    zoomSlider.addEventListener('input', applyZoom);
 
-      Instascan.Camera.getCameras().then(function (cameras) {
-        if (cameras.length > 0) {
-          camaraActiva = cameras.length > 1 ? cameras[1] : cameras[0]; // usar trasera si existe
-          scanner.start(camaraActiva);
-        } else {
-          alert('No se encontró cámara en este dispositivo.');
+    async function iniciar() {
+      btnIniciar.style.display = 'none';
+      btnFinalizar.style.display = 'inline-block';
+      video.style.display = 'block';
+      extraControls.style.display = 'flex';
+      resultado.textContent = "";
+
+      try {
+        // Elegir cámara posterior
+        const devices = await BrowserCodeReader.listVideoInputDevices();
+        let deviceId = null;
+
+        // Si hay labels, intenta detectar la trasera
+        const back = devices.find(d => /back|rear|environment/i.test(d.label));
+        if (back) deviceId = back.deviceId;
+        else if (devices[1]) deviceId = devices[1].deviceId;
+        else if (devices[0]) deviceId = devices[0].deviceId;
+
+        // Iniciar decodificación desde la cámara elegida
+        controls = await reader.decodeFromVideoDevice(deviceId, video, (result, err, _controls) => {
+          if (result) {
+            const text = result.getText();
+            const now = Date.now();
+            // Ignora lecturas repetidas en < 1.5 s
+            if (text === lastText && (now - lastTime) < 1500) return;
+            lastText = text; lastTime = now;
+
+            navigator.vibrate?.(80);
+            guardarRegistro(text);
+          }
+        });
+
+        // Acceso a track para linterna/zoom
+        const stream = video.srcObject;
+        if (stream && stream.getVideoTracks().length) {
+          currentTrack = stream.getVideoTracks()[0];
+          setupTorchAndZoom(currentTrack);
         }
-      }).catch(function (e) {
-        console.error(e);
-      });
-    }
-
-    // 🔹 Detener escaneo
-    function detenerEscaneo() {
-      if (scanner) {
-        scanner.stop();
-        document.getElementById("preview").style.display = "none";
-        document.getElementById("btnFinalizar").style.display = "none";
-        document.getElementById("btnIniciar").style.display = "block";
-        document.getElementById("resultado").innerHTML = "⛔ Escaneo detenido";
+      } catch (e) {
+        resultado.style.color = "#b00020";
+        resultado.textContent = "❌ No se pudo abrir la cámara: " + e;
+        btnFinalizar.style.display = 'none';
+        btnIniciar.style.display = 'inline-block';
+        video.style.display = 'none';
+        extraControls.style.display = 'none';
       }
     }
 
-    // 🔹 Guardar en Firestore
+    async function finalizar() {
+      try {
+        await controls?.stop();
+      } catch(e) {}
+      // Apaga la cámara completamente
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+      }
+      video.srcObject = null;
+      currentTrack = null;
+      btnFinalizar.style.display = 'none';
+      btnIniciar.style.display = 'inline-block';
+      video.style.display = 'none';
+      extraControls.style.display = 'none';
+      resultado.style.color = "#147a22";
+      if (!resultado.textContent) resultado.textContent = "⛔ Escaneo detenido";
+    }
+
+    function setupTorchAndZoom(track) {
+      const caps = track.getCapabilities?.() || {};
+      // Linterna
+      if (caps.torch) {
+        btnTorch.style.display = 'inline-block';
+      } else {
+        btnTorch.style.display = 'none';
+      }
+      // Zoom
+      if (typeof caps.zoom === 'number' || (caps.zoom && caps.zoom.max)) {
+        const min = caps.zoom.min ?? 1;
+        const max = caps.zoom.max ?? 1;
+        zoomSlider.min = min;
+        zoomSlider.max = max;
+        zoomSlider.step = (max - min) / 20 || 0.1;
+        zoomSlider.value = Math.min(Math.max(1, min), max);
+        zoomSlider.style.display = 'inline-block';
+      } else {
+        zoomSlider.style.display = 'none';
+      }
+    }
+
+    async function toggleTorch() {
+      if (!currentTrack) return;
+      try {
+        torchOn = !torchOn;
+        await currentTrack.applyConstraints({ advanced: [{ torch: torchOn }] });
+        btnTorch.textContent = torchOn ? "🔦 Linterna (ON)" : "🔦 Linterna";
+      } catch (e) {
+        console.warn("Torch no soportada:", e);
+        btnTorch.style.display = 'none';
+      }
+    }
+
+    async function applyZoom() {
+      if (!currentTrack) return;
+      const val = Number(zoomSlider.value);
+      try {
+        await currentTrack.applyConstraints({ advanced: [{ zoom: val }] });
+      } catch (e) {
+        console.warn("Zoom no soportado:", e);
+        zoomSlider.style.display = 'none';
+      }
+    }
+
+    // Guardar en Firestore: registros/{dd-mm-yy}/{HH-mm-ss}/autoId
     function guardarRegistro(decodedText) {
-      let datos = decodedText.split(",");
-      if (datos.length < 3) {
-        alert("⚠️ QR inválido. Debe tener formato: dni,nombre,cargo");
+      const partes = decodedText.split(",");
+      if (partes.length < 3) {
+        resultado.style.color = "#b00020";
+        resultado.textContent = "⚠️ QR inválido. Formato: dni,nombre,cargo";
         return;
       }
 
-      let dni = datos[0].trim();
-      let nombre = datos[1].trim();
-      let cargo = datos[2].trim();
+      const dni = partes[0].trim();
+      const nombre = partes[1].trim();
+      const cargo = partes[2].trim();
 
-      let now = new Date();
-      let fecha = now.toLocaleDateString("es-PE").replace(/\//g, "-");
-      let hora = now.toLocaleTimeString("es-PE").replace(/:/g, "-");
+      const now = new Date();
+      const fecha = new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima" })
+        .format(now).replace(/\//g, "-"); // dd-mm-yy
+      const hora = new Intl.DateTimeFormat("es-PE", {
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+        hour12: false, timeZone: "America/Lima"
+      }).format(now).replace(/:/g, "-"); // HH-mm-ss
 
       db.collection("registros")
         .doc(fecha)
         .collection(hora)
         .add({
-          dni: dni,
-          nombre: nombre,
-          cargo: cargo,
+          dni, nombre, cargo,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         })
         .then(() => {
-          document.getElementById("resultado").innerHTML =
-            "✅ " + nombre + " (" + cargo + ") registrado";
+          resultado.style.color = "#147a22";
+          resultado.textContent = `✅ ${nombre} (${cargo}) registrado`;
         })
-        .catch((err) => {
+        .catch(err => {
           console.error(err);
-          alert("❌ Error al guardar en Firebase");
+          resultado.style.color = "#b00020";
+          resultado.textContent = "❌ Error al guardar en Firebase";
         });
     }
   </script>
