@@ -5,6 +5,7 @@
   <title>Registro Serenazgo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
 
@@ -59,7 +60,8 @@
       flex: 0 0 auto;
       display: flex; flex-direction: column;
       gap: 8px; width: 85%; max-width: 340px;
-      margin-top: auto; margin-bottom: 40px; /* 📌 Subimos botones */
+      margin-top: auto;
+      margin-bottom: 70px; /* 📌 Subidos 2 cm aprox */
     }
     .btn {
       padding: 12px; font-size: 17px; font-weight: bold;
@@ -71,7 +73,7 @@
 
     /* Toast */
     #toast {
-      position: fixed; bottom: 15%; left: 50%;
+      position: fixed; bottom: 20%; left: 50%;
       transform: translateX(-50%);
       background: #28a745; color: white;
       padding: 10px 18px; border-radius: 8px;
@@ -118,6 +120,7 @@
   <script type="module">
     import { BrowserQRCodeReader } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.4/+esm";
 
+    // Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyCOX79jqHzLhaa_FD9-X-kx3y7IMOjOzv8",
       authDomain: "transito-dfcf4.firebaseapp.com",
