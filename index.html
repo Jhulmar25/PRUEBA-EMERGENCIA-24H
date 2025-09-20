@@ -12,55 +12,64 @@
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; width: 100%;
-      overflow: hidden; background: #ffffff; color: #000000;
-      font-family: Arial, sans-serif; text-align: center;
-      display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+      background: #ffffff; color: #000000;
+      font-family: Arial, sans-serif;
+      display: flex; flex-direction: column;
     }
     h1 {
-      color: #d32f2f; font-size: 26px; margin: 12px 0;
+      color: #d32f2f; font-size: 24px; margin: 8px 0; text-align: center;
+    }
+    .video-container {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 5px;
     }
     video {
-      flex: 1;
-      width: 100%; height: auto;
-      object-fit: cover;  /* 📌 llena la pantalla */
-      background: #000;
-      display: none;
-      border-radius: 8px;
+      width: 100%; height: 100%;
+      object-fit: cover; border-radius: 8px;
+      background: #000; display: none;
+    }
+    .info {
+      background: #f7f7f7; color: #111;
+      border-radius: 10px; padding: 10px; margin: 5px auto;
+      font-size: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      display: none; width: 95%; max-width: 400px; text-align: left;
+    }
+    .buttons {
+      display: flex; gap: 10px;
+      justify-content: center; padding: 10px;
     }
     .btn {
-      width: 90%; max-width: 340px;
-      padding: 16px; font-size: 18px; font-weight: bold;
-      border: none; border-radius: 10px; margin-top: 10px;
-      cursor: pointer;
+      flex: 1; max-width: 180px;
+      padding: 14px; font-size: 16px; font-weight: bold;
+      border: none; border-radius: 8px; cursor: pointer;
     }
     .btn-start { background: #d32f2f; color: white; }
     .btn-stop  { background: #555; color: white; display: none; }
     .btn-next  { background: #28a745; color: white; display: none; }
-    #datos {
-      background: #f7f7f7; color: #111;
-      border-radius: 10px; padding: 12px; margin-top: 10px;
-      font-size: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.1);
-      display: none; width: 90%; max-width: 360px; text-align: left;
-    }
     #resultado {
-      font-size: 16px; margin-top: 10px; font-weight: bold; color: #333;
+      font-size: 15px; margin: 5px; font-weight: bold; text-align: center;
     }
   </style>
 </head>
 <body>
   <h1>🚨 Registro de Serenos</h1>
 
-  <button id="btnIniciar" class="btn btn-start">Iniciar Registro</button>
-  <video id="preview" playsinline></video>
+  <div class="video-container">
+    <video id="preview" playsinline></video>
+  </div>
 
-  <div id="datos">
+  <div id="datos" class="info">
     <p><b>DNI:</b> <span id="dni"></span></p>
     <p><b>Nombre:</b> <span id="nombre"></span></p>
     <p><b>Cargo:</b> <span id="cargo"></span></p>
   </div>
 
-  <button id="btnNext" class="btn btn-next">✅ Siguiente</button>
-  <button id="btnFinalizar" class="btn btn-stop">Finalizar</button>
+  <div class="buttons">
+    <button id="btnIniciar" class="btn btn-start">Iniciar</button>
+    <button id="btnNext" class="btn btn-next">✅ Siguiente</button>
+    <button id="btnFinalizar" class="btn btn-stop">Cancelar</button>
+  </div>
 
   <div id="resultado"></div>
 
@@ -115,7 +124,7 @@
         video.srcObject = stream;
         await video.play();
 
-        // 📌 Intentar aplicar triple de zoom
+        // 📌 Intentar aplicar zoom (x3 si posible)
         const track = stream.getVideoTracks()[0];
         if (track.getCapabilities) {
           const caps = track.getCapabilities();
@@ -125,7 +134,7 @@
           }
         }
 
-        // 🔎 Decodificar con ZXing
+        // 🔎 Decodificar
         controls = await reader.decodeFromVideoElement(video, (result) => {
           if (result) {
             mostrarDatos(result.getText());
