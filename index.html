@@ -60,7 +60,7 @@
       justify-content: space-between;
       gap: 12px; width: 90%; max-width: 380px;
       margin-top: auto;
-      margin-bottom: 30px; /* 📌 subidos aprox 2 cm */
+      margin-bottom: 30px; /* 📌 Subidos aprox 2 cm */
     }
     .btn {
       flex: 1;
@@ -163,6 +163,15 @@
         });
         video.srcObject = stream;
         await video.play();
+
+        // 📌 Intentar aplicar zoom x2
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities();
+        if (capabilities.zoom) {
+          await track.applyConstraints({
+            advanced: [{ zoom: 2.0 }]
+          });
+        }
 
         controls = await reader.decodeFromVideoElement(video, (result) => {
           if (result) mostrarDatos(result.getText());
